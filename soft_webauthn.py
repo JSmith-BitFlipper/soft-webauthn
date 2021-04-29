@@ -38,7 +38,7 @@ class SoftWebauthnDevice():
         self.credential_id = os.urandom(32)
         self.private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
         self.rp_id = rp_id
-        self.user_handle = user_handle
+        self.user_handle = user_handle.replace("=", "")
 
     def cred_as_attested(self):
         """return current credential as AttestedCredentialData"""
@@ -61,11 +61,12 @@ class SoftWebauthnDevice():
         self.cred_init(options['publicKey']['rp']['id'], options['publicKey']['user']['id'])
 
         # generate credential response
-        client_data = {
+        client_data = json.dumps({
             'type': 'webauthn.create',
-            'challenge': urlsafe_b64encode(options['publicKey']['challenge']).decode('ascii').rstrip('='),
+            #'challenge': urlsafe_b64encode(bytes(options['publicKey']['challenge'], 'ascii')).decode('ascii').rstrip('='),
+            'challenge': options['publicKey']['challenge'].replace("+", "-").replace("/", "_").replace("=", ""),
             'origin': origin
-        }
+        }).encode('utf-8')
 
         rp_id_hash = sha256(self.rp_id.encode('ascii'))
         flags = b'\x41'  # attested_data + user_present
@@ -81,11 +82,11 @@ class SoftWebauthnDevice():
         }
 
         return {
-            'id': urlsafe_b64encode(self.credential_id),
-            'rawId': self.credential_id,
+            'id': urlsafe_b64encode(self.credential_id).decode('ascii').rstrip('='),
+            'rawId': urlsafe_b64encode(self.credential_id).decode('ascii').rstrip('='),
             'response': {
-                'clientDataJSON': json.dumps(client_data).encode('utf-8'),
-                'attestationObject': cbor.encode(attestation_object)
+                'clientDataJSON': urlsafe_b64encode(client_data).decode('ascii').rstrip('='),
+                'attestationObject': urlsafe_b64encode(cbor.encode(attestation_object)).decode('ascii').rstrip('='),
             },
             'type': 'public-key'
         }
@@ -101,9 +102,12 @@ class SoftWebauthnDevice():
         # prepare signature
         client_data = json.dumps({
             'type': 'webauthn.get',
-            'challenge': urlsafe_b64encode(options['publicKey']['challenge']).decode('ascii').rstrip('='),
+            #'challenge': urlsafe_b64encode(options['publicKey']['challenge']).decode('ascii').rstrip('='),
+            'challenge': options['publicKey']['challenge'].replace("+", "-").replace("/", "_").replace("=", ""),
+            'clientExtensions': options['publicKey']['extensions'],
             'origin': origin
         }).encode('utf-8')
+
         client_data_hash = sha256(client_data)
 
         rp_id_hash = sha256(self.rp_id.encode('ascii'))
@@ -115,12 +119,12 @@ class SoftWebauthnDevice():
 
         # generate assertion
         return {
-            'id': urlsafe_b64encode(self.credential_id),
-            'rawId': self.credential_id,
+            'id': urlsafe_b64encode(self.credential_id).decode('ascii').rstrip('='),
+            'rawId': urlsafe_b64encode(self.credential_id).decode('ascii').rstrip('='),
             'response': {
-                'authenticatorData': authenticator_data,
-                'clientDataJSON': client_data,
-                'signature': signature,
+                'authenticatorData': urlsafe_b64encode(authenticator_data).decode('ascii').rstrip('='),
+                'clientDataJSON': urlsafe_b64encode(client_data).decode('ascii').rstrip('='),
+                'signature': urlsafe_b64encode(signature).decode('ascii').rstrip('='),
                 'userHandle': self.user_handle
             },
             'type': 'public-key'

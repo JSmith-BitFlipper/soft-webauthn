@@ -13,17 +13,17 @@ freeze:
 	@pip freeze | grep -v '^pkg-resources='
 
 lint:
-	python -m flake8 soft_webauthn.py tests
-	python -m pylint --ignore=example_server.py soft_webauthn.py tests
+	python3.6 -m flake8 soft_webauthn.py tests
+	python3.6 -m pylint --ignore=example_server.py soft_webauthn.py tests
 
 test:
-	python -m pytest -v
+	python3.6 -m pytest -v
 
 coverage:
 	coverage run --source soft_webauthn -m pytest tests -x -vv
 	coverage report --show-missing --fail-under 100
 
 wheel:
-	python setup.py sdist bdist_wheel
+	python3.6 setup.py sdist bdist_wheel
 upload:
 	twine upload dist/*
